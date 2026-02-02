@@ -2,7 +2,7 @@
 
 A macOS menu bar app that displays real-time blood glucose readings from Dexcom CGM sensors via the Dexcom Share API.
 
-<img width="353" height="437" alt="Screenshot 2026-02-02 at 16 42 37" src="https://github.com/user-attachments/assets/9c0f2e87-bbd0-4a96-ba1d-165d05e0939b" />
+<img width="386" height="436" alt="Screenshot 2026-02-02 at 16 48 17" src="https://github.com/user-attachments/assets/69723f0d-459b-4b2c-8ffe-dc70ed767cc5" />
 
 ## Features
 
