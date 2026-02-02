@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var glucoseMonitor: GlucoseMonitor
     @State private var showingSettings = false
+    @State private var selectedHours = 3
 
     var body: some View {
         VStack(spacing: 0) {
@@ -55,9 +56,31 @@ struct MenuBarView: View {
 
             Divider()
 
-            GlucoseGraphView(readings: glucoseMonitor.threeHourReadings, range: glucoseMonitor.glucoseRange)
-                .frame(height: 180)
-                .padding()
+            // Time range selector
+            Picker("Time Range", selection: $selectedHours) {
+                Text("3h").tag(3)
+                Text("6h").tag(6)
+                Text("12h").tag(12)
+                Text("24h").tag(24)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.top, 8)
+
+            // Graph
+            GlucoseGraphView(
+                readings: glucoseMonitor.readings(forHours: selectedHours),
+                range: glucoseMonitor.glucoseRange,
+                hours: selectedHours
+            )
+            .frame(height: 160)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
+            // Time in Range stats
+            timeInRangeView
+                .padding(.horizontal)
+                .padding(.bottom, 8)
 
             Divider()
 
@@ -150,6 +173,61 @@ struct MenuBarView: View {
             .buttonStyle(.borderless)
             .disabled(glucoseMonitor.isLoading)
         }
+    }
+
+    private var timeInRangeView: some View {
+        HStack(spacing: 12) {
+            if let tir = glucoseMonitor.timeInRange24h {
+                // Time in Range (green)
+                VStack(spacing: 2) {
+                    Text("\(Int(tir))%")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(.green)
+                    Text("In Range")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+
+                // Time Below (red/yellow)
+                if let below = glucoseMonitor.timeBelowRange24h {
+                    VStack(spacing: 2) {
+                        Text("\(Int(below))%")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(below > 4 ? .red : .yellow)
+                        Text("Low")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                // Time Above (yellow/red)
+                if let above = glucoseMonitor.timeAboveRange24h {
+                    VStack(spacing: 2) {
+                        Text("\(Int(above))%")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(above > 25 ? .red : .yellow)
+                        Text("High")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                Text("24h")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Time in range data not available")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
     }
 
     private var footerView: some View {

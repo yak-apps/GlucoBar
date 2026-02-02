@@ -4,17 +4,44 @@ import Charts
 struct GlucoseGraphView: View {
     let readings: [GlucoseReading]
     let range: GlucoseRange
+    let hours: Int
+
+    init(readings: [GlucoseReading], range: GlucoseRange, hours: Int = 3) {
+        self.readings = readings
+        self.range = range
+        self.hours = hours
+    }
 
     private var timeRange: ClosedRange<Date> {
         let now = Date()
-        let threeHoursAgo = now.addingTimeInterval(-3 * 60 * 60)
-        return threeHoursAgo...now
+        let start = now.addingTimeInterval(-Double(hours) * 60 * 60)
+        return start...now
     }
 
     private var glucoseRange: ClosedRange<Double> {
         let minValue = min(readings.map { $0.mmolValue }.min() ?? 2.0, range.lowUrgent - 0.5)
         let maxValue = max(readings.map { $0.mmolValue }.max() ?? 20.0, range.highUrgent + 0.5)
         return minValue...maxValue
+    }
+
+    private var xAxisStride: Calendar.Component {
+        switch hours {
+        case 3: return .hour
+        case 6: return .hour
+        case 12: return .hour
+        case 24: return .hour
+        default: return .hour
+        }
+    }
+
+    private var xAxisStrideCount: Int {
+        switch hours {
+        case 3: return 1
+        case 6: return 2
+        case 12: return 3
+        case 24: return 6
+        default: return 1
+        }
     }
 
     var body: some View {
@@ -30,7 +57,7 @@ struct GlucoseGraphView: View {
             Image(systemName: "chart.line.downtrend.xyaxis")
                 .font(.system(size: 32))
                 .foregroundColor(.secondary)
-            Text("No data for the last 3 hours")
+            Text("No data for the last \(hours) hours")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -80,7 +107,7 @@ struct GlucoseGraphView: View {
                     y: .value("Glucose", reading.mmolValue)
                 )
                 .foregroundStyle(colorForReading(reading))
-                .symbolSize(20)
+                .symbolSize(hours <= 6 ? 20 : 10) // Smaller dots for longer time ranges
             }
 
             // Target range lines
@@ -95,7 +122,7 @@ struct GlucoseGraphView: View {
         .chartXScale(domain: timeRange)
         .chartYScale(domain: glucoseRange)
         .chartXAxis {
-            AxisMarks(values: .stride(by: .hour)) { value in
+            AxisMarks(values: .stride(by: xAxisStride, count: xAxisStrideCount)) { value in
                 AxisGridLine()
                 AxisValueLabel(format: .dateTime.hour())
             }
@@ -118,7 +145,7 @@ struct GlucoseGraphView: View {
 }
 
 #Preview {
-    let sampleReadings = (0..<36).map { i in
+    let sampleReadings = (0..<288).map { i in
         GlucoseReading(
             value: Double.random(in: 70...180),
             trend: Int.random(in: 1...7),
@@ -126,7 +153,7 @@ struct GlucoseGraphView: View {
         )
     }
 
-    return GlucoseGraphView(readings: sampleReadings, range: .default)
+    return GlucoseGraphView(readings: sampleReadings, range: .default, hours: 24)
         .frame(width: 300, height: 180)
         .padding()
 }
