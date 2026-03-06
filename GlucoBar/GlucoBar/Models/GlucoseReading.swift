@@ -63,6 +63,90 @@ extension GlucoseReading {
         self.timestamp = timestamp
     }
 
+    /// Parse from CareLink patient data API
+    /// Each sg item: {"sg": 120, "timestamp": "2024-01-01T12:00:00.000Z", "kind": "SG"}
+    /// Trend is passed in separately (from top-level lastSGTrend) or per-item if present
+    init?(fromCareLink dict: [String: Any], trendString: String? = nil) {
+        // glucose value (mg/dL)
+        let sgValue: Double
+        if let sg = dict["sg"] as? Int {
+            sgValue = Double(sg)
+        } else if let sg = dict["sg"] as? Double {
+            sgValue = sg
+        } else {
+            return nil
+        }
+
+        guard sgValue > 0 else { return nil }
+
+        // timestamp: ISO8601
+        guard let tsString = dict["timestamp"] as? String,
+              let timestamp = ISO8601DateFormatter().date(from: tsString) else {
+            return nil
+        }
+
+        // trend: use per-item if available, otherwise fall back to passed-in string
+        let trend: TrendArrow
+        if let perItemTrend = dict["trend"] as? String {
+            trend = TrendArrow.fromCareLinkString(perItemTrend)
+        } else if let trendString = trendString {
+            trend = TrendArrow.fromCareLinkString(trendString)
+        } else {
+            trend = .flat
+        }
+
+        self.id = UUID()
+        self.value = sgValue
+        self.trend = trend.rawValue
+        self.timestamp = timestamp
+    }
+
+    /// Parse from LibreLinkUp graph API
+    /// Format: {"FactoryTimestamp":"1/4/2024 8:27:48 AM","ValueInMgPerDl":120,"TrendArrow":3}
+    init?(fromLibre dict: [String: Any]) {
+        // Value in mg/dL
+        let mgdl: Double
+        if let v = dict["ValueInMgPerDl"] as? Int    { mgdl = Double(v) }
+        else if let v = dict["ValueInMgPerDl"] as? Double { mgdl = v }
+        else { return nil }
+        guard mgdl > 0 else { return nil }
+
+        // TrendArrow: 1–5 int
+        let arrow: TrendArrow
+        if let t = dict["TrendArrow"] as? Int {
+            arrow = TrendArrow.fromLibreInt(t)
+        } else {
+            arrow = .flat
+        }
+
+        // Timestamp: prefer FactoryTimestamp (UTC) then Timestamp
+        let tsKey = dict["FactoryTimestamp"] != nil ? "FactoryTimestamp" : "Timestamp"
+        guard let tsString = dict[tsKey] as? String,
+              let timestamp = GlucoseReading.parseLibreDate(tsString) else {
+            return nil
+        }
+
+        self.id        = UUID()
+        self.value     = mgdl
+        self.trend     = arrow.rawValue
+        self.timestamp = timestamp
+    }
+
+    private static func parseLibreDate(_ string: String) -> Date? {
+        // Formats seen in the wild:
+        // "1/4/2024 8:27:48 AM"  (M/d/yyyy h:mm:ss a, en_US)
+        // "1/4/2024 8:27:48"     (no AM/PM, 24-hour)
+        let fmtWithAMPM = DateFormatter()
+        fmtWithAMPM.locale = Locale(identifier: "en_US_POSIX")
+        fmtWithAMPM.dateFormat = "M/d/yyyy h:mm:ss a"
+        if let d = fmtWithAMPM.date(from: string) { return d }
+
+        let fmt24 = DateFormatter()
+        fmt24.locale = Locale(identifier: "en_US_POSIX")
+        fmt24.dateFormat = "M/d/yyyy H:mm:ss"
+        return fmt24.date(from: string)
+    }
+
     private static func parseDate(from dateString: String) -> Date? {
         // Format: "Date(1234567890000)" or "Date(1234567890000+0000)"
         let pattern = #"Date\((\d+)"#

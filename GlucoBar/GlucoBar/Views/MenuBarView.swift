@@ -1,39 +1,94 @@
 import SwiftUI
 
+// MARK: - View State
+
+private enum MenuBarViewState {
+    case main
+    case cgmSelection
+    case dexcomSettings
+    case careLinkSettings
+    case libreSettings
+}
+
+// MARK: - MenuBarView
+
 struct MenuBarView: View {
     @ObservedObject var glucoseMonitor: GlucoseMonitor
-    @State private var showingSettings = false
+    @State private var viewState: MenuBarViewState = .main
     @State private var selectedHours = 3
 
     var body: some View {
         VStack(spacing: 0) {
-            if showingSettings {
-                SettingsView(glucoseMonitor: glucoseMonitor, showingSettings: $showingSettings)
-            } else if !glucoseMonitor.isAuthenticated && !KeychainHelper.hasCredentials {
-                setupPromptView
-            } else {
-                mainContentView
+            switch viewState {
+            case .main:
+                if !glucoseMonitor.isAuthenticated && !hasAnyCredentials {
+                    setupPromptView
+                } else {
+                    mainContentView
+                }
+
+            case .cgmSelection:
+                CGMSelectionView(
+                    glucoseMonitor: glucoseMonitor,
+                    showingSettings: settingsBinding
+                )
+
+            case .dexcomSettings:
+                DexcomSettingsView(
+                    glucoseMonitor: glucoseMonitor,
+                    showingSettings: settingsBinding
+                )
+
+            case .careLinkSettings:
+                CareLinkSettingsView(
+                    glucoseMonitor: glucoseMonitor,
+                    showingSettings: settingsBinding
+                )
+
+            case .libreSettings:
+                LibreSettingsView(
+                    glucoseMonitor: glucoseMonitor,
+                    showingSettings: settingsBinding
+                )
             }
         }
         .frame(width: 340)
     }
 
+    // A binding that maps showingSettings = true/false back to .main/.settings
+    private var settingsBinding: Binding<Bool> {
+        Binding(
+            get: { viewState != .main },
+            set: { showing in
+                if !showing {
+                    viewState = .main
+                }
+            }
+        )
+    }
+
+    private var hasAnyCredentials: Bool {
+        KeychainHelper.hasCredentials || KeychainHelper.hasCareLinkCredentials || KeychainHelper.hasLibreCredentials
+    }
+
+    // MARK: - Setup Prompt (no credentials at all)
+
     private var setupPromptView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "drop.fill")
+            Image(systemName: "waveform.path.ecg")
                 .font(.system(size: 48))
                 .foregroundColor(.blue)
 
             Text("Welcome to GlucoBar")
                 .font(.headline)
 
-            Text("Connect your Dexcom Share account to monitor glucose.")
+            Text("Connect your CGM to start monitoring glucose.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
-            Button("Set Up Dexcom") {
-                showingSettings = true
+            Button("Set Up CGM") {
+                viewState = .cgmSelection
             }
             .buttonStyle(.borderedProminent)
 
@@ -48,6 +103,8 @@ struct MenuBarView: View {
         .padding(24)
     }
 
+    // MARK: - Main Content
+
     private var mainContentView: some View {
         VStack(spacing: 0) {
             currentReadingView
@@ -56,7 +113,6 @@ struct MenuBarView: View {
 
             Divider()
 
-            // Time range selector
             Picker("Time Range", selection: $selectedHours) {
                 Text("3h").tag(3)
                 Text("6h").tag(6)
@@ -67,7 +123,6 @@ struct MenuBarView: View {
             .padding(.horizontal)
             .padding(.top, 8)
 
-            // Graph
             GlucoseGraphView(
                 readings: glucoseMonitor.readings(forHours: selectedHours),
                 range: glucoseMonitor.glucoseRange,
@@ -77,7 +132,6 @@ struct MenuBarView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
 
-            // Time in Range stats
             timeInRangeView
                 .padding(.horizontal)
                 .padding(.bottom, 8)
@@ -89,6 +143,8 @@ struct MenuBarView: View {
                 .padding(.vertical, 8)
         }
     }
+
+    // MARK: - Current Reading
 
     private var currentReadingView: some View {
         HStack {
@@ -122,9 +178,8 @@ struct MenuBarView: View {
                     }
                 } else if glucoseMonitor.isLoading {
                     HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Loading...")
+                        ProgressView().scaleEffect(0.8)
+                        Text("Loading…")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -164,9 +219,7 @@ struct MenuBarView: View {
             Spacer()
 
             Button {
-                Task {
-                    await glucoseMonitor.fetchReadings()
-                }
+                Task { await glucoseMonitor.fetchReadings() }
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
@@ -175,10 +228,11 @@ struct MenuBarView: View {
         }
     }
 
+    // MARK: - Time In Range
+
     private var timeInRangeView: some View {
         HStack(spacing: 12) {
             if let tir = glucoseMonitor.timeInRange24h {
-                // Time in Range (green)
                 VStack(spacing: 2) {
                     Text("\(Int(tir))%")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -189,7 +243,6 @@ struct MenuBarView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                // Time Below (red/yellow)
                 if let below = glucoseMonitor.timeBelowRange24h {
                     VStack(spacing: 2) {
                         Text("\(Int(below))%")
@@ -202,7 +255,6 @@ struct MenuBarView: View {
                     .frame(maxWidth: .infinity)
                 }
 
-                // Time Above (yellow/red)
                 if let above = glucoseMonitor.timeAboveRange24h {
                     VStack(spacing: 2) {
                         Text("\(Int(above))%")
@@ -230,6 +282,8 @@ struct MenuBarView: View {
         .cornerRadius(8)
     }
 
+    // MARK: - Footer
+
     private var footerView: some View {
         HStack {
             if glucoseMonitor.error != nil {
@@ -241,7 +295,11 @@ struct MenuBarView: View {
             Spacer()
 
             Button("Settings") {
-                showingSettings = true
+                switch glucoseMonitor.selectedSource {
+                case .dexcom:    viewState = .dexcomSettings
+                case .carelink:  viewState = .careLinkSettings
+                case .libre:     viewState = .libreSettings
+                }
             }
             .buttonStyle(.borderless)
             .font(.caption)
@@ -258,7 +316,9 @@ struct MenuBarView: View {
     }
 }
 
-struct SettingsView: View {
+// MARK: - DexcomSettingsView (previously SettingsView)
+
+struct DexcomSettingsView: View {
     @ObservedObject var glucoseMonitor: GlucoseMonitor
     @ObservedObject var launchAtLogin = LaunchAtLogin.shared
     @Binding var showingSettings: Bool
@@ -285,7 +345,7 @@ struct SettingsView: View {
 
             Image(systemName: "drop.fill")
                 .font(.system(size: 36))
-                .foregroundColor(.blue)
+                .foregroundColor(.green)
 
             Text("Dexcom Share Login")
                 .font(.headline)
@@ -338,7 +398,6 @@ struct SettingsView: View {
                 .font(.caption2)
                 .foregroundColor(.secondary)
 
-            // Buttons
             VStack(spacing: 8) {
                 Button {
                     Task { await authenticate() }

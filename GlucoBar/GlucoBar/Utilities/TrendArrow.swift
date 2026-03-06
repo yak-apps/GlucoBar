@@ -57,4 +57,29 @@ enum TrendArrow: Int, Codable {
         default: return nil
         }
     }
+
+    /// LibreLinkUp TrendArrow: 1=RisingQuickly, 2=Rising, 3=Flat, 4=Falling, 5=FallingQuickly
+    static func fromLibreInt(_ value: Int) -> TrendArrow {
+        switch value {
+        case 1: return .doubleUp
+        case 2: return .singleUp
+        case 3: return .flat
+        case 4: return .singleDown
+        case 5: return .doubleDown
+        default: return .flat
+        }
+    }
+
+    static func fromCareLinkString(_ string: String) -> TrendArrow {
+        switch string.uppercased() {
+        case "UP_DOUBLE", "UP_TRIPLE": return .doubleUp
+        case "UP":                     return .singleUp
+        case "UP_SLIGHT":              return .fortyFiveUp
+        case "FLAT", "NONE":           return .flat
+        case "DOWN_SLIGHT":            return .fortyFiveDown
+        case "DOWN":                   return .singleDown
+        case "DOWN_DOUBLE", "DOWN_TRIPLE": return .doubleDown
+        default:                       return .flat
+        }
+    }
 }

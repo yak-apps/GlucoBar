@@ -9,46 +9,84 @@ class GlucoseMonitor: ObservableObject {
     @Published var isLoading = false
     @Published var isAuthenticated = false
     @Published var glucoseRange: GlucoseRange = .default
+    @Published var selectedSource: CGMSource = KeychainHelper.cgmSource
 
-    private var service: DexcomShareService?
+    private var service: (any GlucoseDataSource)?
     private var timer: Timer?
     private let pollInterval: TimeInterval = 300 // 5 minutes
 
     init() {
-        // Check if we have stored credentials and try to use them
-        if KeychainHelper.hasCredentials,
-           let username = KeychainHelper.getValue(for: .username),
-           let password = KeychainHelper.getValue(for: .password),
-           let regionString = KeychainHelper.getValue(for: .region),
-           let region = DexcomRegion(rawValue: regionString) {
-            setupService(username: username, password: password, region: region)
+        let source = KeychainHelper.cgmSource
+        selectedSource = source
 
-            // Start fetching immediately
-            Task {
-                await fetchReadings()
+        switch source {
+        case .dexcom:
+            if KeychainHelper.hasCredentials,
+               let username = KeychainHelper.getValue(for: .username),
+               let password = KeychainHelper.getValue(for: .password),
+               let regionString = KeychainHelper.getValue(for: .region),
+               let region = DexcomRegion(rawValue: regionString) {
+                setupService(username: username, password: password, region: region)
+                Task { await fetchReadings() }
+            }
+
+        case .carelink:
+            if KeychainHelper.hasCareLinkCredentials,
+               let username = KeychainHelper.getValue(for: .clUsername),
+               let countryRaw = KeychainHelper.getValue(for: .clCountry),
+               let region = CareLinkRegion(rawValue: countryRaw) {
+                setupCareLinkService(username: username, region: region)
+                Task { await fetchReadings() }
+            }
+
+        case .libre:
+            if KeychainHelper.hasLibreCredentials,
+               let email = KeychainHelper.getValue(for: .libreEmail),
+               let password = KeychainHelper.getValue(for: .librePassword) {
+                setupLibreService(email: email, password: password)
+                Task { await fetchReadings() }
             }
         }
     }
 
+    // MARK: - Source Selection
+
+    func selectSource(_ source: CGMSource) {
+        selectedSource = source
+        KeychainHelper.cgmSource = source
+    }
+
+    // MARK: - Service Setup
+
     func setupService(username: String, password: String, region: DexcomRegion) {
         service = DexcomShareService(username: username, password: password, region: region)
 
-        // Save credentials
         KeychainHelper.save(username, for: .username)
         KeychainHelper.save(password, for: .password)
         KeychainHelper.save(region.rawValue, for: .region)
     }
 
+    func setupCareLinkService(username: String, region: CareLinkRegion) {
+        service = CareLinkService(username: username, region: region)
+
+        KeychainHelper.save(username, for: .clUsername)
+        KeychainHelper.save(region.rawValue, for: .clCountry)
+    }
+
+    func setupLibreService(email: String, password: String) {
+        service = LibreLinkUpService(email: email, password: password)
+
+        KeychainHelper.save(email, for: .libreEmail)
+        KeychainHelper.save(password, for: .librePassword)
+    }
+
+    // MARK: - Monitoring
+
     func startMonitoring() {
-        // Stop any existing timer
         stopMonitoring()
 
-        // Fetch immediately
-        Task {
-            await fetchReadings()
-        }
+        Task { await fetchReadings() }
 
-        // Start periodic updates
         timer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 await self?.fetchReadings()
@@ -71,15 +109,19 @@ class GlucoseMonitor: ObservableObject {
         error = nil
 
         do {
-            // Fetch 24 hours of data (288 readings at 5-min intervals)
             let newReadings = try await service.fetchLatestReadings(minutes: 1440, maxCount: 288)
             readings = newReadings
             latestReading = newReadings.last
             isAuthenticated = true
             error = nil
-        } catch let dexcomError as DexcomError {
-            error = dexcomError.errorDescription
-            if case .invalidCredentials = dexcomError {
+        } catch let localizedError as LocalizedError {
+            error = localizedError.errorDescription ?? localizedError.localizedDescription
+            // Mark as unauthenticated on credential errors
+            if let dexcomError = localizedError as? DexcomError,
+               case .invalidCredentials = dexcomError {
+                isAuthenticated = false
+            } else if let clError = localizedError as? CareLinkError,
+                      case .notAuthenticated = clError {
                 isAuthenticated = false
             }
         } catch {
@@ -102,12 +144,10 @@ class GlucoseMonitor: ObservableObject {
             try await service.authenticate()
             isAuthenticated = true
             isLoading = false
-
-            // Start monitoring after successful auth
             startMonitoring()
             return true
-        } catch let dexcomError as DexcomError {
-            error = dexcomError.errorDescription
+        } catch let localizedError as LocalizedError {
+            error = localizedError.errorDescription ?? localizedError.localizedDescription
             isAuthenticated = false
             isLoading = false
             return false
@@ -121,19 +161,27 @@ class GlucoseMonitor: ObservableObject {
 
     func logout() {
         stopMonitoring()
-        KeychainHelper.deleteAll()
+        service?.logout()
         service = nil
         latestReading = nil
         readings = []
         isAuthenticated = false
         error = nil
+
+        switch selectedSource {
+        case .dexcom:
+            KeychainHelper.deleteAll()
+        case .carelink:
+            KeychainHelper.deleteCareLinkCredentials()
+        case .libre:
+            KeychainHelper.deleteLibreCredentials()
+        }
     }
 
-    var lastUpdatedText: String {
-        guard let reading = latestReading else {
-            return "No data"
-        }
+    // MARK: - Computed Properties
 
+    var lastUpdatedText: String {
+        guard let reading = latestReading else { return "No data" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: reading.timestamp, relativeTo: Date())
@@ -142,50 +190,32 @@ class GlucoseMonitor: ObservableObject {
     // MARK: - Filtered Readings by Time Range
 
     func readings(forHours hours: Int) -> [GlucoseReading] {
-        let cutoff = Date().addingTimeInterval(-Double(hours) * 60 * 60)
+        let cutoff = Date().addingTimeInterval(-Double(hours) * 3600)
         return readings.filter { $0.timestamp >= cutoff }
     }
 
-    var threeHourReadings: [GlucoseReading] {
-        readings(forHours: 3)
-    }
+    var threeHourReadings: [GlucoseReading] { readings(forHours: 3) }
 
-    // MARK: - Time In Range Calculation
+    // MARK: - Time In Range
 
-    /// Calculate time in range percentage for the last 24 hours
     var timeInRange24h: Double? {
         let last24h = readings(forHours: 24)
         guard !last24h.isEmpty else { return nil }
-
-        let inRangeCount = last24h.filter { reading in
-            let value = reading.mmolValue
-            return value >= glucoseRange.lowWarning && value <= glucoseRange.highWarning
-        }.count
-
-        return Double(inRangeCount) / Double(last24h.count) * 100
+        let inRange = last24h.filter { $0.mmolValue >= glucoseRange.lowWarning && $0.mmolValue <= glucoseRange.highWarning }.count
+        return Double(inRange) / Double(last24h.count) * 100
     }
 
-    /// Calculate time below range percentage for the last 24 hours
     var timeBelowRange24h: Double? {
         let last24h = readings(forHours: 24)
         guard !last24h.isEmpty else { return nil }
-
-        let belowCount = last24h.filter { reading in
-            reading.mmolValue < glucoseRange.lowWarning
-        }.count
-
-        return Double(belowCount) / Double(last24h.count) * 100
+        let below = last24h.filter { $0.mmolValue < glucoseRange.lowWarning }.count
+        return Double(below) / Double(last24h.count) * 100
     }
 
-    /// Calculate time above range percentage for the last 24 hours
     var timeAboveRange24h: Double? {
         let last24h = readings(forHours: 24)
         guard !last24h.isEmpty else { return nil }
-
-        let aboveCount = last24h.filter { reading in
-            reading.mmolValue > glucoseRange.highWarning
-        }.count
-
-        return Double(aboveCount) / Double(last24h.count) * 100
+        let above = last24h.filter { $0.mmolValue > glucoseRange.highWarning }.count
+        return Double(above) / Double(last24h.count) * 100
     }
 }

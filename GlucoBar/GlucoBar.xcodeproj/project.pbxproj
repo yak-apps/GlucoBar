@@ -18,6 +18,12 @@
 		A01234560009 /* GlucoseGraphView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570009 /* GlucoseGraphView.swift */; };
 		A01234560010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A01234570010 /* Assets.xcassets */; };
 		A01234560011 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570013 /* LaunchAtLogin.swift */; };
+		A01234560012 /* GlucoseDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570014 /* GlucoseDataSource.swift */; };
+		A01234560013 /* CareLinkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570015 /* CareLinkService.swift */; };
+		A01234560014 /* CGMSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570016 /* CGMSelectionView.swift */; };
+		A01234560015 /* CareLinkSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570017 /* CareLinkSettingsView.swift */; };
+		A01234560016 /* LibreLinkUpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570018 /* LibreLinkUpService.swift */; };
+		A01234560017 /* LibreSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01234570019 /* LibreSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +41,12 @@
 		A01234570011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A01234570012 /* GlucoBar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GlucoBar.entitlements; sourceTree = "<group>"; };
 		A01234570013 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
+		A01234570014 /* GlucoseDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseDataSource.swift; sourceTree = "<group>"; };
+		A01234570015 /* CareLinkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CareLinkService.swift; sourceTree = "<group>"; };
+		A01234570016 /* CGMSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGMSelectionView.swift; sourceTree = "<group>"; };
+		A01234570017 /* CareLinkSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CareLinkSettingsView.swift; sourceTree = "<group>"; };
+		A01234570018 /* LibreLinkUpService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibreLinkUpService.swift; sourceTree = "<group>"; };
+		A01234570019 /* LibreSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibreSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +105,9 @@
 			children = (
 				A01234570008 /* MenuBarView.swift */,
 				A01234570009 /* GlucoseGraphView.swift */,
+				A01234570016 /* CGMSelectionView.swift */,
+				A01234570017 /* CareLinkSettingsView.swift */,
+				A01234570019 /* LibreSettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -100,7 +115,10 @@
 		A012345A0006 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A01234570014 /* GlucoseDataSource.swift */,
 				A01234570006 /* DexcomShareService.swift */,
+				A01234570015 /* CareLinkService.swift */,
+				A01234570018 /* LibreLinkUpService.swift */,
 				A01234570007 /* GlucoseMonitor.swift */,
 			);
 			path = Services;
@@ -195,6 +213,12 @@
 				A01234560008 /* MenuBarView.swift in Sources */,
 				A01234560009 /* GlucoseGraphView.swift in Sources */,
 				A01234560011 /* LaunchAtLogin.swift in Sources */,
+				A01234560012 /* GlucoseDataSource.swift in Sources */,
+				A01234560013 /* CareLinkService.swift in Sources */,
+				A01234560014 /* CGMSelectionView.swift in Sources */,
+				A01234560015 /* CareLinkSettingsView.swift in Sources */,
+				A01234560016 /* LibreLinkUpService.swift in Sources */,
+				A01234560017 /* LibreSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

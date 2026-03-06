@@ -10,6 +10,20 @@ enum KeychainHelper {
         case region = "dexcom_region"
         case sessionId = "dexcom_session_id"
         case accountId = "dexcom_account_id"
+        // CareLink
+        case clAccessToken  = "cl_access_token"
+        case clRefreshToken = "cl_refresh_token"
+        case clClientId     = "cl_client_id"
+        case clClientSecret = "cl_client_secret"
+        case clMagId        = "cl_mag_identifier"
+        case clUsername     = "cl_username"
+        case clCountry      = "cl_country"
+        // FreeStyle Libre (LibreLinkUp)
+        case libreEmail     = "libre_email"
+        case librePassword  = "libre_password"
+        case libreToken     = "libre_token"
+        case libreHost      = "libre_host"
+        case librePatientId = "libre_patient_id"
     }
 
     @discardableResult
@@ -77,7 +91,48 @@ enum KeychainHelper {
         }
     }
 
+    static func deleteCareLinkCredentials() {
+        for key in [Key.clAccessToken, .clRefreshToken, .clClientId, .clClientSecret,
+                    .clMagId, .clUsername, .clCountry] {
+            delete(key)
+        }
+    }
+
+    static func deleteLibreCredentials() {
+        for key in [Key.libreEmail, .librePassword, .libreToken, .libreHost, .librePatientId] {
+            delete(key)
+        }
+        UserDefaults.standard.removeObject(forKey: "libreTokenExpiry")
+    }
+
     static var hasCredentials: Bool {
         getValue(for: .username) != nil && getValue(for: .password) != nil
+    }
+
+    static var hasCareLinkCredentials: Bool {
+        getValue(for: .clAccessToken) != nil && getValue(for: .clUsername) != nil
+    }
+
+    static var hasLibreCredentials: Bool {
+        getValue(for: .libreToken) != nil && getValue(for: .libreEmail) != nil
+    }
+
+    // MARK: - CGM Source (UserDefaults, not sensitive)
+
+    static var cgmSource: CGMSource {
+        get {
+            if let raw = UserDefaults.standard.string(forKey: "cgmSource"),
+               let source = CGMSource(rawValue: raw) {
+                return source
+            }
+            return .dexcom
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "cgmSource")
+        }
+    }
+
+    static var hasCGMSourceSelected: Bool {
+        UserDefaults.standard.string(forKey: "cgmSource") != nil
     }
 }

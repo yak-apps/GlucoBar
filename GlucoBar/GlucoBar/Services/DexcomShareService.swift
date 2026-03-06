@@ -294,6 +294,12 @@ actor DexcomShareService {
         }
     }
 
+    // Clear in-memory session state (called from nonisolated logout)
+    func clearSession() {
+        sessionId = nil
+        accountId = nil
+    }
+
     private func makeRequest(url: URL, body: [String: Any]) async throws -> (Data, URLResponse) {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -308,5 +314,14 @@ actor DexcomShareService {
             logger.error("Network error: \(error.localizedDescription)")
             throw DexcomError.networkError(error)
         }
+    }
+}
+
+// MARK: - GlucoseDataSource conformance
+
+extension DexcomShareService: GlucoseDataSource {
+    nonisolated func logout() {
+        // Spawn task to clear actor-isolated session state
+        Task { await self.clearSession() }
     }
 }
