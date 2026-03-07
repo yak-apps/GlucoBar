@@ -79,10 +79,20 @@ extension GlucoseReading {
 
         guard sgValue > 0 else { return nil }
 
-        // timestamp: ISO8601
-        guard let tsString = dict["timestamp"] as? String,
-              let timestamp = ISO8601DateFormatter().date(from: tsString) else {
-            return nil
+        // timestamp: ISO8601, with or without timezone (CareLink omits it)
+        guard let tsString = dict["timestamp"] as? String else { return nil }
+        let timestamp: Date
+        let isoFull = ISO8601DateFormatter()
+        if let d = isoFull.date(from: tsString) {
+            timestamp = d
+        } else {
+            // No timezone suffix — treat as UTC (device timezone handled by server)
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+            df.timeZone = TimeZone(abbreviation: "UTC")
+            guard let d = df.date(from: tsString) else { return nil }
+            timestamp = d
         }
 
         // trend: use per-item if available, otherwise fall back to passed-in string

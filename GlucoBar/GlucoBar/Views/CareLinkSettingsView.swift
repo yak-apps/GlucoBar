@@ -63,11 +63,14 @@ struct CareLinkSettingsView: View {
             }
 
             if let error = errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollView {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 80)
             }
 
             Text("Your CareLink account credentials are used to authorize the app via browser login.")
@@ -127,6 +130,7 @@ struct CareLinkSettingsView: View {
     private func authenticate() async {
         isAuthenticating = true
         errorMessage = nil
+        defer { isAuthenticating = false }
 
         glucoseMonitor.setupCareLinkService(username: username, region: region)
         let success = await glucoseMonitor.authenticate()
@@ -136,7 +140,5 @@ struct CareLinkSettingsView: View {
         } else {
             errorMessage = glucoseMonitor.error ?? "Connection failed"
         }
-
-        isAuthenticating = false
     }
 }

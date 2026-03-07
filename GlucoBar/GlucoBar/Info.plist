@@ -18,5 +18,16 @@
     <string>14.0</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2024 GlucoBar. All rights reserved.</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.glucobar.carelink</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.medtronic.carepartner</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

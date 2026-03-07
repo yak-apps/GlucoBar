@@ -27,7 +27,7 @@ class GlucoseMonitor: ObservableObject {
                let regionString = KeychainHelper.getValue(for: .region),
                let region = DexcomRegion(rawValue: regionString) {
                 setupService(username: username, password: password, region: region)
-                Task { await fetchReadings() }
+                startMonitoring()
             }
 
         case .carelink:
@@ -36,7 +36,7 @@ class GlucoseMonitor: ObservableObject {
                let countryRaw = KeychainHelper.getValue(for: .clCountry),
                let region = CareLinkRegion(rawValue: countryRaw) {
                 setupCareLinkService(username: username, region: region)
-                Task { await fetchReadings() }
+                startMonitoring()
             }
 
         case .libre:
@@ -44,7 +44,7 @@ class GlucoseMonitor: ObservableObject {
                let email = KeychainHelper.getValue(for: .libreEmail),
                let password = KeychainHelper.getValue(for: .librePassword) {
                 setupLibreService(email: email, password: password)
-                Task { await fetchReadings() }
+                startMonitoring()
             }
         }
     }
@@ -116,7 +116,6 @@ class GlucoseMonitor: ObservableObject {
             error = nil
         } catch let localizedError as LocalizedError {
             error = localizedError.errorDescription ?? localizedError.localizedDescription
-            // Mark as unauthenticated on credential errors
             if let dexcomError = localizedError as? DexcomError,
                case .invalidCredentials = dexcomError {
                 isAuthenticated = false
