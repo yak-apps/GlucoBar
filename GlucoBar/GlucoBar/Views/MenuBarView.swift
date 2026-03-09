@@ -55,12 +55,20 @@ struct MenuBarView: View {
         .frame(width: 340)
     }
 
-    // A binding that maps showingSettings = true/false back to .main/.settings
+    // Binding used by CGMSelectionView and settings views.
+    // true  → route to the source-specific settings screen
+    // false → back to main
     private var settingsBinding: Binding<Bool> {
         Binding(
             get: { viewState != .main },
             set: { showing in
-                if !showing {
+                if showing {
+                    switch glucoseMonitor.selectedSource {
+                    case .dexcom:   viewState = .dexcomSettings
+                    case .carelink: viewState = .careLinkSettings
+                    case .libre:    viewState = .libreSettings
+                    }
+                } else {
                     viewState = .main
                 }
             }
@@ -293,6 +301,15 @@ struct MenuBarView: View {
             }
 
             Spacer()
+
+            Button("Switch CGM") {
+                viewState = .cgmSelection
+            }
+            .buttonStyle(.borderless)
+            .font(.caption)
+
+            Text("•")
+                .foregroundColor(.secondary)
 
             Button("Settings") {
                 switch glucoseMonitor.selectedSource {
