@@ -10,6 +10,7 @@ class GlucoseMonitor: ObservableObject {
     @Published var isAuthenticated = false
     @Published var glucoseRange: GlucoseRange = .default
     @Published var selectedSource: CGMSource = KeychainHelper.cgmSource
+    @Published var pumpStatus: MedtronicPumpStatus?
 
     private var service: (any GlucoseDataSource)?
     private var timer: Timer?
@@ -116,6 +117,12 @@ class GlucoseMonitor: ObservableObject {
             latestReading = newReadings.last
             isAuthenticated = true
             error = nil
+
+            if let clService = service as? CareLinkService {
+                pumpStatus = clService.latestPumpStatus
+            } else {
+                pumpStatus = nil
+            }
         } catch let localizedError as LocalizedError {
             error = localizedError.errorDescription ?? localizedError.localizedDescription
             if let dexcomError = localizedError as? DexcomError,
@@ -166,6 +173,7 @@ class GlucoseMonitor: ObservableObject {
         service = nil
         latestReading = nil
         readings = []
+        pumpStatus = nil
         isAuthenticated = false
         error = nil
 

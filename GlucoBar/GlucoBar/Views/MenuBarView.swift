@@ -140,6 +140,12 @@ struct MenuBarView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
 
+            if glucoseMonitor.pumpStatus != nil {
+                pumpStatusView
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
+
             timeInRangeView
                 .padding(.horizontal)
                 .padding(.bottom, 8)
@@ -233,6 +239,94 @@ struct MenuBarView: View {
             }
             .buttonStyle(.borderless)
             .disabled(glucoseMonitor.isLoading)
+        }
+    }
+
+    // MARK: - Pump Status
+
+    private var pumpStatusView: some View {
+        HStack(spacing: 12) {
+            if let status = glucoseMonitor.pumpStatus {
+                if let iob = status.activeInsulin {
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) {
+                            Image(systemName: "drop.fill")
+                                .font(.caption2)
+                                .foregroundColor(.blue)
+                            Text(String(format: "%.1fU", iob))
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        }
+                        Text("IOB")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                if let reservoir = status.reservoirPercent {
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) {
+                            Image(systemName: "cross.vial.fill")
+                                .font(.caption2)
+                                .foregroundColor(reservoir <= 20 ? .red : reservoir <= 40 ? .yellow : .green)
+                            Text("\(reservoir)%")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        }
+                        Text("Reservoir")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                if let battery = status.pumpBatteryPercent {
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) {
+                            Image(systemName: batteryIconName(percent: battery))
+                                .font(.caption2)
+                                .foregroundColor(battery <= 20 ? .red : battery <= 40 ? .yellow : .green)
+                            Text("\(battery)%")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        }
+                        Text("Battery")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
+                if let hours = status.sensorDurationHours {
+                    let days = hours / 24
+                    let remainingHours = hours % 24
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) {
+                            Image(systemName: "sensor.tag.radiowaves.forward.fill")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                            Text(days > 0 ? "\(days)d \(remainingHours)h" : "\(remainingHours)h")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        }
+                        Text("Sensor")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
+    }
+
+    private func batteryIconName(percent: Int) -> String {
+        switch percent {
+        case 0:       return "battery.0percent"
+        case 1...25:  return "battery.25percent"
+        case 26...50: return "battery.50percent"
+        case 51...75: return "battery.75percent"
+        default:      return "battery.100percent"
         }
     }
 

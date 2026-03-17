@@ -137,6 +137,8 @@ final class CareLinkService: NSObject, @preconcurrency GlucoseDataSource {
     private let username: String
     private let region: CareLinkRegion
 
+    private(set) var latestPumpStatus: MedtronicPumpStatus?
+
     private var auth0Config: CareLinkAuth0Config?
     private var accessToken: String?
     private var refreshToken: String?
@@ -180,6 +182,7 @@ final class CareLinkService: NSObject, @preconcurrency GlucoseDataSource {
         accessToken  = nil
         refreshToken = nil
         auth0Config  = nil
+        latestPumpStatus = nil
         currentAuthSession?.cancel()
         currentAuthSession = nil
         KeychainHelper.deleteCareLinkCredentials()
@@ -523,7 +526,46 @@ final class CareLinkService: NSObject, @preconcurrency GlucoseDataSource {
             readings.append(reading)
         }
 
+        // Extract pump status fields
+        extractPumpStatus(from: json)
+
         return readings.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private func extractPumpStatus(from json: [String: Any]) {
+        // activeInsulin can be an object with "amount" or a direct number
+        var iob: Double?
+        if let aiObj = json["activeInsulin"] as? [String: Any] {
+            iob = aiObj["amount"] as? Double
+        } else if let aiVal = json["activeInsulin"] as? Double {
+            iob = aiVal
+        }
+
+        let reservoirPercent = json["reservoirLevelPercent"] as? Int
+        let reservoirUnits = json["reservoirRemainingUnits"] as? Double
+        let batteryPercent = json["medicalDeviceBatteryLevelPercent"] as? Int
+        let sensorHours = json["sensorDurationHours"] as? Int
+        let sensorMinutes = json["sensorDurationMinutes"] as? Int
+
+        var therapyState: String?
+        if let stateDict = json["therapyAlgorithmState"] as? [String: Any] {
+            therapyState = stateDict["autoModeShieldState"] as? String
+        }
+
+        // Only create status if we have at least one useful field
+        if iob != nil || reservoirPercent != nil || batteryPercent != nil || sensorHours != nil {
+            latestPumpStatus = MedtronicPumpStatus(
+                activeInsulin: iob,
+                reservoirPercent: reservoirPercent,
+                reservoirUnits: reservoirUnits,
+                pumpBatteryPercent: batteryPercent,
+                sensorDurationHours: sensorHours,
+                sensorDurationMinutes: sensorMinutes,
+                therapyAlgorithmState: therapyState
+            )
+        } else {
+            latestPumpStatus = nil
+        }
     }
 
     // MARK: - Helpers

@@ -1,26 +1,31 @@
 # GlucoBar
 
-A macOS menu bar app that displays real-time blood glucose readings from Dexcom CGM sensors via the Dexcom Share API.
+A macOS menu bar app that displays real-time blood glucose readings from your CGM sensor. Supports **Dexcom**, **Medtronic CareLink**, and **FreeStyle Libre**.
 
-<img width="386" height="436" alt="Screenshot 2026-02-02 at 16 48 17" src="https://github.com/user-attachments/assets/69723f0d-459b-4b2c-8ffe-dc70ed767cc5" />
+![GlucoBar Screenshot](screenshot.png)
 
 ## Features
 
 - **Real-time glucose display** in the menu bar (e.g., "6.0 →")
+- **Multiple CGM sources**: Dexcom Share, Medtronic CareLink, FreeStyle Libre
 - **Trend arrows** showing glucose direction (↑↑, ↑, ↗, →, ↘, ↓, ↓↓)
 - **Color-coded values**:
   - 🟢 Green: In range (4.0-10.0 mmol/L)
   - 🟡 Yellow: Warning (3.3-4.0 or 10.0-13.9 mmol/L)
   - 🔴 Red: Urgent (<3.3 or >13.9 mmol/L)
-- **3-hour glucose graph** in the popover
+- **Glucose graph** with selectable time range (3h, 6h, 12h, 24h)
+- **Medtronic pump status** — IOB, reservoir level, battery, and sensor age (CareLink only)
+- **24-hour Time in Range** stats
 - **Launch at Login** option
 - **Automatic refresh** every 5 minutes
 
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
-- Dexcom CGM sensor (G6, G7, ONE, ONE+)
-- Dexcom Share enabled with at least one follower
+- A supported CGM sensor:
+  - **Dexcom** (G6, G7, ONE, ONE+) with Dexcom Share enabled
+  - **Medtronic** (Guardian, 780G, 770G) via CareLink
+  - **FreeStyle Libre** (Libre 2, Libre 3) via LibreLinkUp
 
 ## Installation
 
@@ -36,44 +41,39 @@ Download the latest `GlucoBar.app` from the [Releases](../../releases) page.
 
 1. Launch GlucoBar
 2. Click the `---` in your menu bar
-3. Click "Set Up Dexcom"
-4. Enter your Dexcom credentials:
-   - **Username**: Your Dexcom account email or phone number (the one with the CGM sensor)
-   - **Password**: Your Dexcom password
-   - **Region**: Select US or Non-US based on your location
-5. Click Connect
+3. Choose your CGM source (Dexcom, Medtronic CareLink, or FreeStyle Libre)
+4. Enter your credentials and connect
 
-### Important Notes
+### Dexcom
+- Enter your Dexcom account email/phone and password
+- Select your region (US or Non-US)
+- Use the account that **has the CGM sensor**, not a follower account
+- Dexcom Share must be enabled with at least one follower
 
-- Use the credentials for the account that **has the CGM sensor** (the sharer), not a follower account
-- Dexcom Share must be enabled in your Dexcom mobile app
-- You must have at least one follower set up for Share to work
+### Medtronic CareLink
+- Enter your CareLink username and select your region
+- Sign in via the browser-based OAuth flow
+- Works with both patient and care partner accounts
 
-## How It Works
-
-GlucoBar uses the unofficial Dexcom Share API to fetch glucose readings. This is the same API used by the Dexcom Follow app. The app:
-
-1. Authenticates with Dexcom Share servers
-2. Fetches glucose readings every 5 minutes
-3. Displays the latest reading in your menu bar
-4. Shows a 3-hour history graph when you click the icon
+### FreeStyle Libre
+- Enter your LibreLinkUp email and password
+- Region is auto-detected
 
 ## Privacy
 
 - Your credentials are stored securely in the macOS Keychain
-- No data is sent anywhere except to Dexcom's servers
+- No data is sent anywhere except to your CGM provider's servers
 - The app runs entirely locally on your Mac
 
 ## Troubleshooting
 
 **"Invalid credentials" error**
-- Make sure you're using the account that has the CGM sensor, not a follower account
-- Try logging into [share.dexcom.com](https://share.dexcom.com) or [shareous1.dexcom.com](https://shareous1.dexcom.com) to verify your credentials
+- Make sure you're using the correct account credentials
+- For Dexcom: try logging into [share.dexcom.com](https://share.dexcom.com) to verify
 
 **"No data available"**
 - Check that your CGM sensor is active and transmitting
-- Verify Dexcom Share is enabled in the Dexcom mobile app
-- Make sure you have at least one follower set up
+- For Dexcom: verify Share is enabled with at least one follower
 
 **App shows "---"**
 - The app is still loading or waiting for data
@@ -85,7 +85,7 @@ MIT License - feel free to use, modify, and distribute.
 
 ## Disclaimer
 
-This app is not affiliated with or endorsed by Dexcom, Inc. It uses an unofficial API that may change without notice. Use at your own risk and always verify glucose readings with your official Dexcom app or a blood glucose meter for medical decisions.
+This app is not affiliated with or endorsed by Dexcom, Medtronic, or Abbott. It uses unofficial APIs that may change without notice. Use at your own risk and always verify glucose readings with your official CGM app or a blood glucose meter for medical decisions.
 
 ## Contributing
 

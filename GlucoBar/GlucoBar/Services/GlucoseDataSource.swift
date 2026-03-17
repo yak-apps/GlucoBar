@@ -16,6 +16,18 @@ enum CGMSource: String, CaseIterable, Codable {
     }
 }
 
+// MARK: - Medtronic Pump Status
+
+struct MedtronicPumpStatus {
+    let activeInsulin: Double?
+    let reservoirPercent: Int?
+    let reservoirUnits: Double?
+    let pumpBatteryPercent: Int?
+    let sensorDurationHours: Int?
+    let sensorDurationMinutes: Int?
+    let therapyAlgorithmState: String?
+}
+
 // MARK: - Protocol
 
 protocol GlucoseDataSource: AnyObject {
